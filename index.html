@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Focus Dial</title>
+<meta name="description" content="A 60-minute visual focus timer.">
+<meta name="theme-color" content="#0e0f12">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style id="app-style">
+:root {
+  color-scheme: dark;
+  --bg: #0e0f12;
+  --surface: #17191e;
+  --face: #1c1f25;
+  --line: #2a2e36;
+  --tick: #5b616d;
+  --text: #e8e9ec;
+  --muted: #8b919c;
+  --red: #e5484d;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+.app {
+  min-height: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 20px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+header { width: 100%; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.brand { font-weight: 600; letter-spacing: .02em; }
+.today { color: var(--muted); font-variant-numeric: tabular-nums; }
+#home { width: 100%; display: flex; flex-direction: column; align-items: center; }
+#stage { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.dial { width: min(100%, 380px, 58vh); aspect-ratio: 1; display: block; touch-action: none; cursor: grab; }
+.dial:active { cursor: grabbing; }
+.face { fill: var(--face); stroke: var(--line); stroke-width: 1.5; }
+.dial.done .face { animation: pulse 1.2s ease-in-out 3; }
+@keyframes pulse { 50% { stroke: var(--red); stroke-width: 3; } }
+.tick { stroke: var(--tick); stroke-width: .8; stroke-linecap: round; }
+.tick.major { stroke: var(--text); stroke-width: 1.4; }
+.num { fill: var(--muted); font: 600 9px system-ui, -apple-system, "Segoe UI", sans-serif; text-anchor: middle; dominant-baseline: central; }
+.wedge { fill: var(--red); }
+.lap { fill: none; stroke: var(--red); stroke-width: 3; stroke-linecap: round; }
+.knob { fill: #2b2f37; stroke: var(--line); stroke-width: 1; }
+.readout { font-size: 28px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.readout.done { color: var(--red); }
+.row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+button {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 14px;
+  min-width: 44px;
+  cursor: pointer;
+}
+button:hover { border-color: var(--tick); }
+button:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+button.primary { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; min-width: 96px; }
+button[aria-pressed="true"] { border-color: var(--red); color: var(--red); }
+.toggles { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; color: var(--muted); }
+.toggles label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+input[type="checkbox"] { accent-color: var(--red); margin: 0; }
+.placeholder { padding: 48px 0; color: var(--muted); text-align: center; display: grid; gap: 12px; justify-items: center; }
+.hint { margin-top: auto; color: var(--muted); font-size: 12px; text-align: center; line-height: 1.9; }
+.hint span { white-space: nowrap; }
+kbd { font: inherit; font-size: 11px; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
+.toast {
+  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 8px 14px; max-width: calc(100% - 32px); opacity: 0; transition: opacity .2s; pointer-events: none;
+}
+.toast.show { opacity: 1; }
+[hidden] { display: none !important; }
+
+/* Floating window */
+body.pip { overflow: hidden; }
+body.pip #stage { height: 100vh; justify-content: center; gap: 6px; padding: 8px; }
+body.pip .dial { width: min(100%, calc(100vh - 78px)); }
+body.pip .readout { font-size: 17px; }
+body.pip button { padding: 4px 10px; border-radius: 8px; font-size: 13px; }
+body.pip button.primary { min-width: 72px; }
+</style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <span class="brand">Focus Dial</span>
+    <span class="today" id="today"></span>
+  </header>
+
+  <div id="home">
+    <section id="stage">
+      <svg class="dial" id="dial" viewBox="-100 -100 200 200" role="slider" aria-label="Minutes" aria-valuemin="0" aria-valuemax="180">
+        <circle class="face" r="98"/>
+        <g id="ticks"></g>
+        <path class="lap" id="lap"/>
+        <path class="wedge" id="wedge"/>
+        <circle class="knob" r="7"/>
+      </svg>
+      <div class="readout" id="readout" aria-live="off">25:00</div>
+      <div class="row">
+        <button class="primary" id="startBtn">Start</button>
+        <button id="resetBtn">Reset</button>
+      </div>
+    </section>
+    <div class="placeholder" id="placeholder" hidden>
+      <span>The timer is in the floating window.</span>
+      <button id="backBtn">Bring it back</button>
+    </div>
+  </div>
+
+  <div class="row" id="presets"></div>
+
+  <div class="row">
+    <button id="pipBtn">Float on top</button>
+    <button id="installBtn" hidden>Install app</button>
+  </div>
+
+  <div class="toggles">
+    <label><input type="checkbox" id="chimeBox"> Chime at end</label>
+    <label id="notifyLabel"><input type="checkbox" id="notifyBox"> Notification at end</label>
+  </div>
+
+  <div class="hint">
+    <span><kbd>Space</kbd> start / pause</span> · <span><kbd>R</kbd> reset</span> · <span><kbd>P</kbd> float</span> ·
+    <span><kbd>1</kbd>–<kbd>4</kbd> presets</span> · <span><kbd>↑</kbd><kbd>↓</kbd> ±1 min (<kbd>Shift</kbd> ±5)</span>
+  </div>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const MIN = 60000;
+const PRESETS = [25, 45, 60, 90];
+const R_WEDGE = 68, R_LAP = 94.5;
+
+const $ = (id) => document.getElementById(id);
+const dial = $('dial'), wedge = $('wedge'), lap = $('lap'), readout = $('readout');
+const startBtn = $('startBtn'), stage = $('stage'), home = $('home'), placeholder = $('placeholder');
+
+// Storage can be blocked (private window, cleared site data), so every access is guarded.
+const store = {
+  get(key, fallback) {
+    try { const v = localStorage.getItem(key); return v == null ? fallback : JSON.parse(v); } catch { return fallback; }
+  },
+  set(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  },
+};
+
+const settings = Object.assign({ chime: true, notify: false }, store.get('fd.settings', {}));
+// status: idle | running | paused | done. While running, endAt is the source of truth so the
+// countdown never drifts when the window is hidden and timers get throttled.
+let S = Object.assign(
+  { status: 'idle', durationMs: 25 * MIN, remainingMs: 25 * MIN, endAt: 0, runStart: 0, focusedMs: 0 },
+  store.get('fd.timer', {})
+);
+
+let pipWin = null;
+let endTimer = 0;
+let lastKey = '';
+
+const saveTimer = () => store.set('fd.timer', S);
+const saveSettings = () => store.set('fd.settings', settings);
+const remaining = () => (S.status === 'running' ? Math.max(0, S.endAt - Date.now()) : S.remainingMs);
+
+// ---------- Dial geometry ----------
+// Minutes run counterclockwise from 12 o'clock; the red wedge shrinks clockwise back to 12.
+function point(min, r) {
+  const a = (min / 60) * 2 * Math.PI;
+  return [-r * Math.sin(a), -r * Math.cos(a)];
+}
+
+function arcPath(min, r, filled) {
+  if (min <= 0) return '';
+  if (min >= 60) {
+    const ring = `M0 ${-r}A${r} ${r} 0 1 0 0 ${r}A${r} ${r} 0 1 0 0 ${-r}`;
+    return filled ? ring + 'Z' : ring;
+  }
+  const [x, y] = point(min, r);
+  const arc = `A${r} ${r} 0 ${min > 30 ? 1 : 0} 0 ${x.toFixed(3)} ${y.toFixed(3)}`;
+  return filled ? `M0 0L0 ${-r}${arc}Z` : `M0 ${-r}${arc}`;
+}
+
+function buildFace() {
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = $('ticks');
+  for (let m = 0; m < 60; m++) {
+    const major = m % 5 === 0;
+    const [x1, y1] = point(m, major ? 83 : 87);
+    const [x2, y2] = point(m, 91);
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('class', major ? 'tick major' : 'tick');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    g.append(line);
+    if (major) {
+      const [tx, ty] = point(m, 75);
+      const t = document.createElementNS(ns, 'text');
+      t.setAttribute('class', 'num');
+      t.setAttribute('x', tx); t.setAttribute('y', ty);
+      t.textContent = m;
+      g.append(t);
+    }
+  }
+}
+
+// ---------- Formatting ----------
+function fmt(ms) {
+  const s = Math.ceil(ms / 1000);
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  const pad = (n) => String(n).padStart(2, '0');
+  return h ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`;
+}
+
+function fmtDuration(ms) {
+  const total = Math.round(ms / MIN);
+  const h = Math.floor(total / 60), m = total % 60;
+  if (!h) return `${m}m`;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+// ---------- Today's log ----------
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function getLog() {
+  const log = store.get('fd.log', null);
+  return log && log.date === todayKey() ? log : { date: todayKey(), sessions: 0, ms: 0 };
+}
+
+function addToLog(ms) {
+  const log = getLog();
+  log.sessions += 1;
+  log.ms += ms;
+  store.set('fd.log', log);
+}
+
+function renderLog() {
+  const log = getLog();
+  $('today').textContent = log.sessions
+    ? `Today · ${log.sessions} session${log.sessions === 1 ? '' : 's'} · ${fmtDuration(log.ms)}`
+    : 'Today · no sessions yet';
+}
+
+// ---------- Rendering ----------
+function render(force) {
+  const ms = remaining();
+  const key = `${S.status}|${Math.ceil(ms / 1000)}|${S.durationMs}`;
+  if (!force && key === lastKey) return;
+  lastKey = key;
+
+  const min = ms / MIN;
+  wedge.setAttribute('d', arcPath(Math.min(min, 60), R_WEDGE, true));
+  lap.setAttribute('d', min > 60 ? arcPath(min - 60, R_LAP, false) : '');
+  dial.setAttribute('aria-valuenow', Math.ceil(min));
+  dial.classList.toggle('done', S.status === 'done');
+
+  readout.textContent = S.status === 'done' ? 'Done' : fmt(ms);
+  readout.classList.toggle('done', S.status === 'done');
+  startBtn.textContent = S.status === 'running' ? 'Pause' : S.status === 'paused' ? 'Resume' : 'Start';
+
+  document.title =
+    S.status === 'running' ? `${fmt(ms)} · Focus Dial`
+    : S.status === 'paused' ? `Paused ${fmt(ms)} · Focus Dial`
+    : S.status === 'done' ? 'Done · Focus Dial'
+    : 'Focus Dial';
+
+  for (const b of document.querySelectorAll('#presets button')) {
+    b.setAttribute('aria-pressed', String(Number(b.dataset.min) * MIN === S.durationMs));
+  }
+  renderLog();
+}
+
+// ---------- Timer ----------
+function schedule() {
+  clearTimeout(endTimer);
+  if (S.status !== 'running') return;
+  // A single (non-repeating) timeout escapes the browser's heavy throttling of hidden pages.
+  endTimer = setTimeout(() => (Date.now() >= S.endAt - 50 ? finish() : schedule()), Math.max(0, S.endAt - Date.now()));
+}
+
+function start() {
+  ensureAudio();
+  if (S.status === 'done' || remaining() <= 0) {
+    S.remainingMs = S.durationMs;
+    S.focusedMs = 0;
+  }
+  if (S.remainingMs <= 0) return;
+  if (S.status === 'idle') S.focusedMs = 0;
+  const now = Date.now();
+  S.status = 'running';
+  S.runStart = now;
+  S.endAt = now + S.remainingMs;
+  schedule(); saveTimer(); render(true);
+}
+
+function pause() {
+  const now = Date.now();
+  S.focusedMs += now - S.runStart;
+  S.remainingMs = Math.max(0, S.endAt - now);
+  S.status = 'paused';
+  schedule(); saveTimer(); render(true);
+}
+
+function toggle() {
+  S.status === 'running' ? pause() : start();
+}
+
+function reset() {
+  S.status = 'idle';
+  S.remainingMs = S.durationMs;
+  S.focusedMs = 0;
+  schedule(); saveTimer(); render(true);
+}
+
+function finish(quiet) {
+  if (S.status === 'running') S.focusedMs += S.endAt - S.runStart;
+  const focused = S.focusedMs;
+  S.status = 'done';
+  S.remainingMs = 0;
+  S.focusedMs = 0;
+  addToLog(focused);
+  schedule(); saveTimer(); render(true);
+  if (!quiet) {
+    chime();
+    notify(focused);
+  }
+}
+
+function setMinutes(min) {
+  min = Math.max(0, Math.min(180, Math.round(min)));
+  const ms = min * MIN;
+  const now = Date.now();
+  S.durationMs = ms;
+  if (S.status === 'running') {
+    if (ms === 0) {
+      S.status = 'idle';
+      S.remainingMs = 0;
+      S.focusedMs = 0;
+    } else {
+      S.focusedMs += now - S.runStart;
+      S.runStart = now;
+      S.endAt = now + ms;
+    }
+  } else {
+    if (S.status === 'done') S.status = 'idle';
+    S.remainingMs = ms;
+  }
+  schedule(); saveTimer(); render(true);
+}
+
+// ---------- Dragging the dial ----------
+let dragging = false, lastDragMin = null;
+
+function minutesAt(e) {
+  const r = dial.getBoundingClientRect();
+  const x = e.clientX - (r.left + r.width / 2), y = e.clientY - (r.top + r.height / 2);
+  if (Math.hypot(x, y) < r.width * 0.05) return null;
+  let a = Math.atan2(-x, -y); // counterclockwise from 12 o'clock
+  if (a < 0) a += 2 * Math.PI;
+  return Math.round((a / (2 * Math.PI)) * 60);
+}
+
+function onDrag(e) {
+  let m = minutesAt(e);
+  if (m == null) return;
+  // Stop at 60 and 0 instead of wrapping around the top.
+  if (lastDragMin != null) {
+    if (lastDragMin >= 45 && m <= 15) m = 60;
+    else if (lastDragMin <= 15 && m >= 45) m = 0;
+  }
+  lastDragMin = m;
+  setMinutes(m);
+}
+
+dial.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0) return;
+  dragging = true;
+  lastDragMin = null;
+  dial.setPointerCapture(e.pointerId);
+  onDrag(e);
+});
+dial.addEventListener('pointermove', (e) => dragging && onDrag(e));
+dial.addEventListener('pointerup', () => (dragging = false));
+dial.addEventListener('pointercancel', () => (dragging = false));
+
+// ---------- Sound and notifications ----------
+let actx = null;
+
+function ensureAudio() {
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+  } catch {}
+}
+
+function chime() {
+  if (!settings.chime || !actx) return;
+  const t0 = actx.currentTime + 0.05;
+  [[659.25, 0], [880, 0.35], [1318.5, 0.7]].forEach(([freq, dt]) => {
+    const osc = actx.createOscillator(), gain = actx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t0 + dt);
+    gain.gain.exponentialRampToValueAtTime(0.22, t0 + dt + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dt + 1.8);
+    osc.connect(gain).connect(actx.destination);
+    osc.start(t0 + dt);
+    osc.stop(t0 + dt + 1.9);
+  });
+}
+
+function notify(focusedMs) {
+  if (!settings.notify || !('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    new Notification('Focus session done', {
+      body: `${fmtDuration(focusedMs)} of deep work. Take a break.`,
+      icon: 'icons/icon-192.png',
+      silent: settings.chime,
+    });
+  } catch {}
+}
+
+async function setNotify(on) {
+  if (on) {
+    const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if (perm !== 'granted') {
+      on = false;
+      toast('Notifications are blocked. Allow them in the browser’s site settings.');
+    }
+  }
+  settings.notify = on;
+  $('notifyBox').checked = on;
+  saveSettings();
+}
+
+// ---------- Floating window (Document Picture-in-Picture) ----------
+async function togglePip() {
+  if (pipWin) { pipWin.close(); return; }
+  if (!('documentPictureInPicture' in window)) {
+    toast('The floating window needs Chrome or Edge.');
+    return;
+  }
+  try {
+    pipWin = await documentPictureInPicture.requestWindow({ width: 240, height: 300 });
+  } catch (err) {
+    console.warn('Floating window failed:', err);
+    toast('Could not open the floating window.');
+    return;
+  }
+  const doc = pipWin.document;
+  doc.title = 'Focus Dial';
+  doc.head.append($('app-style').cloneNode(true));
+  doc.body.classList.add('pip');
+  doc.body.append(stage);
+  doc.addEventListener('keydown', onKey);
+  doc.addEventListener('pointerdown', ensureAudio, true);
+  placeholder.hidden = false;
+  $('pipBtn').textContent = 'Close floating window';
+  pipWin.addEventListener('pagehide', () => {
+    home.prepend(stage);
+    placeholder.hidden = true;
+    $('pipBtn').textContent = 'Float on top';
+    pipWin = null;
+    startTicker();
+    render(true);
+  });
+  startTicker();
+  render(true);
+}
+
+// The display loop runs in whichever window is showing the dial, so it keeps
+// updating when the main window is minimized and only the floating window is visible.
+let tickWin = null, tickId = 0;
+function startTicker() {
+  try { if (tickWin && !tickWin.closed) tickWin.clearInterval(tickId); } catch {}
+  tickWin = pipWin || window;
+  tickId = tickWin.setInterval(() => {
+    if (S.status === 'running' && Date.now() >= S.endAt) finish();
+    else render();
+  }, 250);
+}
+
+// ---------- Keyboard ----------
+function onKey(e) {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const step = e.shiftKey ? 5 : 1;
+  switch (e.key) {
+    case ' ': e.preventDefault(); toggle(); break;
+    case 'r': case 'R': reset(); break;
+    case 'p': case 'P': togglePip(); break;
+    case 'ArrowUp': e.preventDefault(); setMinutes(Math.ceil(remaining() / MIN) + step); break;
+    case 'ArrowDown': e.preventDefault(); setMinutes(Math.ceil(remaining() / MIN) - step); break;
+    default:
+      if (e.key >= '1' && e.key <= String(PRESETS.length)) setMinutes(PRESETS[Number(e.key) - 1]);
+  }
+}
+
+// ---------- Misc UI ----------
+let toastTimer = 0;
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  installPrompt = e;
+  $('installBtn').hidden = false;
+});
+window.addEventListener('appinstalled', () => ($('installBtn').hidden = true));
+$('installBtn').addEventListener('click', async () => {
+  if (!installPrompt) return;
+  installPrompt.prompt();
+  await installPrompt.userChoice;
+  installPrompt = null;
+  $('installBtn').hidden = true;
+});
+
+// ---------- Wire up ----------
+buildFace();
+
+for (const m of PRESETS) {
+  const b = document.createElement('button');
+  b.textContent = `${m} min`;
+  b.dataset.min = m;
+  b.addEventListener('click', () => setMinutes(m));
+  $('presets').append(b);
+}
+
+startBtn.addEventListener('click', toggle);
+$('resetBtn').addEventListener('click', reset);
+$('pipBtn').addEventListener('click', togglePip);
+$('backBtn').addEventListener('click', () => pipWin && pipWin.close());
+
+$('chimeBox').checked = settings.chime;
+$('chimeBox').addEventListener('change', (e) => {
+  settings.chime = e.target.checked;
+  saveSettings();
+  if (settings.chime) { ensureAudio(); chime(); }
+});
+
+if ('Notification' in window) {
+  $('notifyBox').checked = settings.notify && Notification.permission === 'granted';
+  $('notifyBox').addEventListener('change', (e) => setNotify(e.target.checked));
+} else {
+  $('notifyLabel').hidden = true;
+}
+
+document.addEventListener('keydown', onKey);
+document.addEventListener('pointerdown', ensureAudio, true);
+document.addEventListener('visibilitychange', () => render(true));
+
+// A session that ended while the app was closed still counts, just without the chime.
+if (S.status === 'running' && Date.now() >= S.endAt) finish(true);
+schedule();
+startTicker();
+render(true);
+
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
