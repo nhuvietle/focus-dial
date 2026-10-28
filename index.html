@@ -32,7 +32,7 @@ body {
 }
 .app {
   min-height: 100%;
-  max-width: 520px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 20px 16px 16px;
   display: flex;
@@ -40,12 +40,13 @@ body {
   align-items: center;
   gap: 18px;
 }
-header { width: 100%; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+header { width: 100%; max-width: 860px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .brand { font-weight: 600; letter-spacing: .02em; }
 .today { color: var(--muted); font-variant-numeric: tabular-nums; }
-#home { width: 100%; display: flex; flex-direction: column; align-items: center; }
-#stage { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
-.dial { width: min(100%, 380px, 58vh); aspect-ratio: 1; display: block; touch-action: none; cursor: grab; }
+/* The dial grows to fill the height the controls leave free (280–860px); the SVG stays square and centered. */
+#home { flex: 1 1 auto; width: 100%; display: flex; flex-direction: column; align-items: center; }
+#stage { flex: 1 1 auto; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.dial { flex: 1 1 0; width: 100%; min-height: 280px; max-height: 860px; display: block; touch-action: none; cursor: grab; }
 .dial:active { cursor: grabbing; }
 .face { fill: var(--face); stroke: var(--line); stroke-width: 1.5; }
 .dial.done .face { animation: pulse 1.2s ease-in-out 3; }
@@ -56,7 +57,7 @@ header { width: 100%; display: flex; justify-content: space-between; align-items
 .wedge { fill: var(--red); }
 .lap { fill: none; stroke: var(--red); stroke-width: 3; stroke-linecap: round; }
 .knob { fill: #2b2f37; stroke: var(--line); stroke-width: 1; }
-.readout { font-size: 28px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.readout { font-size: clamp(28px, 4.5vh, 48px); font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .readout.done { color: var(--red); }
 .row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 button {
@@ -79,6 +80,12 @@ input[type="checkbox"] { accent-color: var(--red); margin: 0; }
 .placeholder { padding: 48px 0; color: var(--muted); text-align: center; display: grid; gap: 12px; justify-items: center; }
 .hint { margin-top: auto; color: var(--muted); font-size: 12px; text-align: center; line-height: 1.9; }
 .hint span { white-space: nowrap; }
+/* Short windows: give the space to the dial instead of the shortcut reference. */
+@media (max-height: 700px) {
+  .app { gap: 12px; padding-top: 12px; padding-bottom: 12px; }
+  #stage { gap: 10px; }
+  .hint { display: none; }
+}
 kbd { font: inherit; font-size: 11px; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
 .toast {
   position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
@@ -92,7 +99,7 @@ kbd { font: inherit; font-size: 11px; border: 1px solid var(--line); border-radi
 body.pip { overflow: hidden; }
 /* Controls keep their height; the dial takes whatever space is left, at any window size. */
 body.pip #stage { height: 100%; gap: 6px; padding: 8px; }
-body.pip .dial { flex: 1 1 0; min-height: 0; width: 100%; aspect-ratio: auto; }
+body.pip .dial { flex: 1 1 0; min-height: 0; max-height: none; width: 100%; }
 body.pip .readout { flex: none; font-size: 17px; line-height: 1.2; }
 body.pip .row { flex: none; flex-wrap: nowrap; gap: 6px; }
 body.pip button { padding: 4px 10px; border-radius: 8px; font-size: 13px; }
