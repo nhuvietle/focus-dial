@@ -43,15 +43,17 @@ body {
 #stage { flex: 1 1 auto; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .dial { flex: 1 1 0; width: 100%; min-height: 200px; max-height: 860px; display: block; touch-action: none; cursor: grab; }
 .dial:active { cursor: grabbing; }
-.face { fill: var(--face); stroke: var(--line); stroke-width: 1.5; }
+/* Drawn at 10x scale with precision hints so text and edges stay sharp when the dial is very large. */
+.dial { shape-rendering: geometricPrecision; text-rendering: geometricPrecision; }
+.face { fill: var(--face); stroke: var(--line); stroke-width: 15; }
 .dial.done .face { animation: pulse 1.2s ease-in-out 3; }
-@keyframes pulse { 50% { stroke: var(--red); stroke-width: 3; } }
-.tick { stroke: var(--tick); stroke-width: .8; stroke-linecap: round; }
-.tick.major { stroke: var(--text); stroke-width: 1.4; }
-.num { fill: var(--muted); font: 600 9px system-ui, -apple-system, "Segoe UI", sans-serif; text-anchor: middle; dominant-baseline: central; }
+@keyframes pulse { 50% { stroke: var(--red); stroke-width: 30; } }
+.tick { stroke: var(--tick); stroke-width: 8; stroke-linecap: round; }
+.tick.major { stroke: var(--text); stroke-width: 14; }
+.num { fill: var(--muted); font: 600 90px system-ui, -apple-system, "Segoe UI", sans-serif; text-anchor: middle; dominant-baseline: central; }
 .wedge { fill: var(--red); }
-.lap { fill: none; stroke: var(--red); stroke-width: 3; stroke-linecap: round; }
-.knob { fill: #2b2f37; stroke: var(--line); stroke-width: 1; }
+.lap { fill: none; stroke: var(--red); stroke-width: 30; stroke-linecap: round; }
+.knob { fill: #2b2f37; stroke: var(--line); stroke-width: 10; }
 .readout { flex: none; font-size: clamp(28px, 4.5vh, 48px); font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .readout.done { color: var(--red); }
 .row { flex: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
@@ -148,12 +150,12 @@ body.pip .unit { display: none; }
 <main class="app">
   <div id="home">
     <section id="stage">
-      <svg class="dial" id="dial" viewBox="-100 -100 200 200" role="slider" aria-label="Minutes" aria-valuemin="0" aria-valuemax="180">
-        <circle class="face" r="98"/>
+      <svg class="dial" id="dial" viewBox="-1000 -1000 2000 2000" role="slider" aria-label="Minutes" aria-valuemin="0" aria-valuemax="180">
+        <circle class="face" r="980"/>
         <g id="ticks"></g>
         <path class="lap" id="lap"/>
         <path class="wedge" id="wedge"/>
-        <circle class="knob" r="7"/>
+        <circle class="knob" r="70"/>
       </svg>
       <div class="readout" id="readout" aria-live="off">30:00</div>
       <div class="row">
@@ -174,7 +176,7 @@ body.pip .unit { display: none; }
 const MIN = 60000;
 const PRESETS = [30, 45, 60, 90];
 const DEFAULT_MIN = 30;
-const R_WEDGE = 68, R_LAP = 94.5;
+const R_WEDGE = 680, R_LAP = 945;
 
 const $ = (id) => document.getElementById(id);
 const dial = $('dial'), wedge = $('wedge'), lap = $('lap'), readout = $('readout');
@@ -229,15 +231,15 @@ function buildFace() {
   const g = $('ticks');
   for (let m = 0; m < 60; m++) {
     const major = m % 5 === 0;
-    const [x1, y1] = point(m, major ? 83 : 87);
-    const [x2, y2] = point(m, 91);
+    const [x1, y1] = point(m, major ? 830 : 870);
+    const [x2, y2] = point(m, 910);
     const line = document.createElementNS(ns, 'line');
     line.setAttribute('class', major ? 'tick major' : 'tick');
     line.setAttribute('x1', x1); line.setAttribute('y1', y1);
     line.setAttribute('x2', x2); line.setAttribute('y2', y2);
     g.append(line);
     if (major) {
-      const [tx, ty] = point(m, 75);
+      const [tx, ty] = point(m, 750);
       const t = document.createElementNS(ns, 'text');
       t.setAttribute('class', 'num');
       t.setAttribute('x', tx); t.setAttribute('y', ty);
