@@ -90,16 +90,19 @@ kbd { font: inherit; font-size: 11px; border: 1px solid var(--line); border-radi
 
 /* Floating window */
 body.pip { overflow: hidden; }
-body.pip #stage { height: 100vh; justify-content: center; gap: 6px; padding: 8px; }
-body.pip .dial { width: min(100%, calc(100vh - 78px)); }
-body.pip .readout { font-size: 17px; }
+/* Controls keep their height; the dial takes whatever space is left, at any window size. */
+body.pip #stage { height: 100%; gap: 6px; padding: 8px; }
+body.pip .dial { flex: 1 1 0; min-height: 0; width: 100%; aspect-ratio: auto; }
+body.pip .readout { flex: none; font-size: 17px; line-height: 1.2; }
+body.pip .row { flex: none; flex-wrap: nowrap; gap: 6px; }
 body.pip button { padding: 4px 10px; border-radius: 8px; font-size: 13px; }
 body.pip button.primary { min-width: 72px; }
+body.pip .pip-only button { padding: 4px 8px; min-width: 0; }
+body.pip .unit { display: none; }
 .pip-only { display: none; }
-/* Presets join the floating window once it is tall enough to fit them. */
-@media (min-height: 330px) {
-  body.pip .pip-only { display: flex; }
-  body.pip .dial { width: min(100%, calc(100vh - 116px)); }
+body.pip .pip-only { display: flex; }
+@media (max-height: 280px) {
+  body.pip .pip-only { display: none; }
 }
 </style>
 </head>
@@ -380,7 +383,7 @@ let dragging = false, lastDragMin = null;
 function minutesAt(e) {
   const r = dial.getBoundingClientRect();
   const x = e.clientX - (r.left + r.width / 2), y = e.clientY - (r.top + r.height / 2);
-  if (Math.hypot(x, y) < r.width * 0.05) return null;
+  if (Math.hypot(x, y) < Math.min(r.width, r.height) * 0.05) return null;
   let a = Math.atan2(-x, -y); // counterclockwise from 12 o'clock
   if (a < 0) a += 2 * Math.PI;
   return Math.round((a / (2 * Math.PI)) * 60);
@@ -554,7 +557,7 @@ const presetButtons = [];
 for (const row of [$('presets'), $('pipPresets')]) {
   for (const m of PRESETS) {
     const b = document.createElement('button');
-    b.textContent = `${m} min`;
+    b.innerHTML = `${m}<span class="unit"> min</span>`;
     b.dataset.min = m;
     b.addEventListener('click', () => setMinutes(m));
     row.append(b);
