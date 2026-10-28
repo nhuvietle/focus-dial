@@ -95,6 +95,12 @@ body.pip .dial { width: min(100%, calc(100vh - 78px)); }
 body.pip .readout { font-size: 17px; }
 body.pip button { padding: 4px 10px; border-radius: 8px; font-size: 13px; }
 body.pip button.primary { min-width: 72px; }
+.pip-only { display: none; }
+/* Presets join the floating window once it is tall enough to fit them. */
+@media (min-height: 330px) {
+  body.pip .pip-only { display: flex; }
+  body.pip .dial { width: min(100%, calc(100vh - 116px)); }
+}
 </style>
 </head>
 <body>
@@ -118,6 +124,7 @@ body.pip button.primary { min-width: 72px; }
         <button class="primary" id="startBtn">Start</button>
         <button id="resetBtn">Reset</button>
       </div>
+      <div class="row pip-only" id="pipPresets"></div>
     </section>
     <div class="placeholder" id="placeholder" hidden>
       <span>The timer is in the floating window.</span>
@@ -283,7 +290,7 @@ function render(force) {
     : S.status === 'done' ? 'Done · Focus Dial'
     : 'Focus Dial';
 
-  for (const b of document.querySelectorAll('#presets button')) {
+  for (const b of presetButtons) {
     b.setAttribute('aria-pressed', String(Number(b.dataset.min) * MIN === S.durationMs));
   }
   renderLog();
@@ -542,12 +549,17 @@ $('installBtn').addEventListener('click', async () => {
 // ---------- Wire up ----------
 buildFace();
 
-for (const m of PRESETS) {
-  const b = document.createElement('button');
-  b.textContent = `${m} min`;
-  b.dataset.min = m;
-  b.addEventListener('click', () => setMinutes(m));
-  $('presets').append(b);
+// One row on the main page, one inside the stage that shows only in a tall floating window.
+const presetButtons = [];
+for (const row of [$('presets'), $('pipPresets')]) {
+  for (const m of PRESETS) {
+    const b = document.createElement('button');
+    b.textContent = `${m} min`;
+    b.dataset.min = m;
+    b.addEventListener('click', () => setMinutes(m));
+    row.append(b);
+    presetButtons.push(b);
+  }
 }
 
 startBtn.addEventListener('click', toggle);
