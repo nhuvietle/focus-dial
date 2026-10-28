@@ -122,7 +122,7 @@ body.pip .pip-only { display: flex; }
         <path class="wedge" id="wedge"/>
         <circle class="knob" r="7"/>
       </svg>
-      <div class="readout" id="readout" aria-live="off">25:00</div>
+      <div class="readout" id="readout" aria-live="off">30:00</div>
       <div class="row">
         <button class="primary" id="startBtn">Start</button>
         <button id="resetBtn">Reset</button>
@@ -156,7 +156,8 @@ body.pip .pip-only { display: flex; }
 
 <script>
 const MIN = 60000;
-const PRESETS = [25, 45, 60, 90];
+const PRESETS = [30, 45, 60, 90];
+const DEFAULT_MIN = 30;
 const R_WEDGE = 68, R_LAP = 94.5;
 
 const $ = (id) => document.getElementById(id);
@@ -177,7 +178,7 @@ const settings = Object.assign({ chime: true, notify: false }, store.get('fd.set
 // status: idle | running | paused | done. While running, endAt is the source of truth so the
 // countdown never drifts when the window is hidden and timers get throttled.
 let S = Object.assign(
-  { status: 'idle', durationMs: 25 * MIN, remainingMs: 25 * MIN, endAt: 0, runStart: 0, focusedMs: 0 },
+  { status: 'idle', durationMs: DEFAULT_MIN * MIN, remainingMs: DEFAULT_MIN * MIN, endAt: 0, runStart: 0, focusedMs: 0 },
   store.get('fd.timer', {})
 );
 
@@ -590,6 +591,13 @@ document.addEventListener('visibilitychange', () => render(true));
 
 // A session that ended while the app was closed still counts, just without the chime.
 if (S.status === 'running' && Date.now() >= S.endAt) finish(true);
+// With no session in progress, every launch starts from the default time.
+if (S.status === 'idle' || S.status === 'done') {
+  S.status = 'idle';
+  S.durationMs = S.remainingMs = DEFAULT_MIN * MIN;
+  S.focusedMs = 0;
+  saveTimer();
+}
 schedule();
 startTicker();
 render(true);

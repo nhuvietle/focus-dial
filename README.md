@@ -9,7 +9,7 @@ A 60-minute visual focus timer. A red disk shows the time left and shrinks as it
 | Set time | Drag around the dial, pick a preset, or use `↑` `↓` (±1 min, `Shift` ±5) |
 | Start / pause | `Space` or the Start button |
 | Reset | `R` |
-| Presets | 25 / 45 / 60 / 90 min, or `1`–`4`. Over 60 min, an outer ring shows the second lap. |
+| Presets | 30 / 45 / 60 / 90 min (opens at 30), or `1`–`4`. Over 60 min, an outer ring shows the second lap. |
 | Floating window | `P` or **Float on top**. A small dial that stays above other apps. Chrome/Edge only, not Safari. |
 | End of session | Optional soft chime and system notification. No ticking while it runs. |
 | Today's log | Top right: completed sessions and focused minutes. Resets each day, stored per machine. |
