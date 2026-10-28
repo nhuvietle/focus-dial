@@ -31,22 +31,17 @@ body {
   user-select: none;
 }
 .app {
-  min-height: 100%;
+  height: 100%;
   max-width: 960px;
   margin: 0 auto;
-  padding: 20px 16px 16px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 18px;
 }
-header { width: 100%; max-width: 860px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-.brand { font-weight: 600; letter-spacing: .02em; }
-.today { color: var(--muted); font-variant-numeric: tabular-nums; }
-/* The dial grows to fill the height the controls leave free (280–860px); the SVG stays square and centered. */
-#home { flex: 1 1 auto; width: 100%; display: flex; flex-direction: column; align-items: center; }
-#stage { flex: 1 1 auto; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
-.dial { flex: 1 1 0; width: 100%; min-height: 280px; max-height: 860px; display: block; touch-action: none; cursor: grab; }
+/* The dial grows to fill the height the controls leave free (200–860px); the SVG stays square and centered. */
+#home { flex: 1 1 auto; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+#stage { flex: 1 1 auto; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.dial { flex: 1 1 0; width: 100%; min-height: 200px; max-height: 860px; display: block; touch-action: none; cursor: grab; }
 .dial:active { cursor: grabbing; }
 .face { fill: var(--face); stroke: var(--line); stroke-width: 1.5; }
 .dial.done .face { animation: pulse 1.2s ease-in-out 3; }
@@ -57,9 +52,9 @@ header { width: 100%; max-width: 860px; display: flex; justify-content: space-be
 .wedge { fill: var(--red); }
 .lap { fill: none; stroke: var(--red); stroke-width: 3; stroke-linecap: round; }
 .knob { fill: #2b2f37; stroke: var(--line); stroke-width: 1; }
-.readout { font-size: clamp(28px, 4.5vh, 48px); font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.readout { flex: none; font-size: clamp(28px, 4.5vh, 48px); font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .readout.done { color: var(--red); }
-.row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.row { flex: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 button {
   font: inherit;
   color: var(--text);
@@ -74,18 +69,31 @@ button:hover { border-color: var(--tick); }
 button:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 button.primary { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; min-width: 96px; }
 button[aria-pressed="true"] { border-color: var(--red); color: var(--red); }
-.toggles { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; color: var(--muted); }
-.toggles label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
 input[type="checkbox"] { accent-color: var(--red); margin: 0; }
 .placeholder { padding: 48px 0; color: var(--muted); text-align: center; display: grid; gap: 12px; justify-items: center; }
-.hint { margin-top: auto; color: var(--muted); font-size: 12px; text-align: center; line-height: 1.9; }
-.hint span { white-space: nowrap; }
-/* Short windows: give the space to the dial instead of the shortcut reference. */
-@media (max-height: 700px) {
-  .app { gap: 12px; padding-top: 12px; padding-bottom: 12px; }
-  #stage { gap: 10px; }
-  .hint { display: none; }
+
+/* Menu: everything that is useful now and then, out of sight until asked for. */
+.menu-btn {
+  position: fixed; top: 10px; right: 10px; z-index: 2;
+  width: 36px; height: 36px; min-width: 0; padding: 0;
+  display: grid; place-items: center;
+  background: transparent; border-color: transparent; color: var(--muted); opacity: .7;
 }
+.menu-btn:hover, .menu-btn[aria-expanded="true"] { opacity: 1; background: var(--surface); border-color: var(--line); }
+.menu {
+  position: fixed; top: 52px; right: 10px; z-index: 2;
+  width: min(300px, calc(100% - 20px));
+  display: grid; gap: 14px; padding: 16px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .45);
+}
+.menu .today { color: var(--text); font-variant-numeric: tabular-nums; }
+.menu .label { color: var(--muted); font-size: 12px; margin-bottom: -6px; }
+.menu button { width: 100%; background: var(--bg); }
+.menu .toggles { display: grid; gap: 10px; color: var(--muted); }
+.menu .toggles label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.menu .keys { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; color: var(--muted); font-size: 12px; }
+.menu .keys span:nth-child(odd) { white-space: nowrap; }
 kbd { font: inherit; font-size: 11px; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
 .toast {
   position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
@@ -104,22 +112,40 @@ body.pip .readout { flex: none; font-size: 17px; line-height: 1.2; }
 body.pip .row { flex: none; flex-wrap: nowrap; gap: 6px; }
 body.pip button { padding: 4px 10px; border-radius: 8px; font-size: 13px; }
 body.pip button.primary { min-width: 72px; }
-body.pip .pip-only button { padding: 4px 8px; min-width: 0; }
+body.pip #presets button { padding: 4px 8px; min-width: 0; }
 body.pip .unit { display: none; }
-.pip-only { display: none; }
-body.pip .pip-only { display: flex; }
 @media (max-height: 280px) {
-  body.pip .pip-only { display: none; }
+  body.pip #presets { display: none; }
 }
 </style>
 </head>
 <body>
-<main class="app">
-  <header>
-    <span class="brand">Focus Dial</span>
-    <span class="today" id="today"></span>
-  </header>
+<button class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false" aria-controls="menu" title="Menu (M)">
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true">
+    <circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="15" cy="9" r="1.6"/>
+  </svg>
+</button>
+<div class="menu" id="menu" hidden>
+  <div class="today" id="today"></div>
+  <button id="pipBtn">Float on top</button>
+  <button id="installBtn" hidden>Install app</button>
+  <div class="label">At the end of a session</div>
+  <div class="toggles">
+    <label><input type="checkbox" id="chimeBox"> Play a chime</label>
+    <label id="notifyLabel"><input type="checkbox" id="notifyBox"> Show a notification</label>
+  </div>
+  <div class="label">Shortcuts</div>
+  <div class="keys">
+    <span><kbd>Space</kbd></span><span>Start / pause</span>
+    <span><kbd>R</kbd></span><span>Reset</span>
+    <span><kbd>1</kbd>–<kbd>4</kbd></span><span>Presets</span>
+    <span><kbd>↑</kbd> <kbd>↓</kbd></span><span>±1 min (<kbd>Shift</kbd> ±5)</span>
+    <span><kbd>P</kbd></span><span>Float on top</span>
+    <span><kbd>M</kbd></span><span>This menu</span>
+  </div>
+</div>
 
+<main class="app">
   <div id="home">
     <section id="stage">
       <svg class="dial" id="dial" viewBox="-100 -100 200 200" role="slider" aria-label="Minutes" aria-valuemin="0" aria-valuemax="180">
@@ -134,29 +160,12 @@ body.pip .pip-only { display: flex; }
         <button class="primary" id="startBtn">Start</button>
         <button id="resetBtn">Reset</button>
       </div>
-      <div class="row pip-only" id="pipPresets"></div>
+      <div class="row" id="presets"></div>
     </section>
     <div class="placeholder" id="placeholder" hidden>
       <span>The timer is in the floating window.</span>
       <button id="backBtn">Bring it back</button>
     </div>
-  </div>
-
-  <div class="row" id="presets"></div>
-
-  <div class="row">
-    <button id="pipBtn">Float on top</button>
-    <button id="installBtn" hidden>Install app</button>
-  </div>
-
-  <div class="toggles">
-    <label><input type="checkbox" id="chimeBox"> Chime at end</label>
-    <label id="notifyLabel"><input type="checkbox" id="notifyBox"> Notification at end</label>
-  </div>
-
-  <div class="hint">
-    <span><kbd>Space</kbd> start / pause</span> · <span><kbd>R</kbd> reset</span> · <span><kbd>P</kbd> float</span> ·
-    <span><kbd>1</kbd>–<kbd>4</kbd> presets</span> · <span><kbd>↑</kbd><kbd>↓</kbd> ±1 min (<kbd>Shift</kbd> ±5)</span>
   </div>
 </main>
 <div class="toast" id="toast" role="status"></div>
@@ -525,6 +534,8 @@ function onKey(e) {
     case ' ': e.preventDefault(); toggle(); break;
     case 'r': case 'R': reset(); break;
     case 'p': case 'P': togglePip(); break;
+    case 'm': case 'M': if (!pipWin || e.target.ownerDocument === document) setMenu($('menu').hidden); break;
+    case 'Escape': setMenu(false); break;
     case 'ArrowUp': e.preventDefault(); setMinutes(Math.ceil(remaining() / MIN) + step); break;
     case 'ArrowDown': e.preventDefault(); setMinutes(Math.ceil(remaining() / MIN) - step); break;
     default:
@@ -533,6 +544,11 @@ function onKey(e) {
 }
 
 // ---------- Misc UI ----------
+function setMenu(open) {
+  $('menu').hidden = !open;
+  $('menuBtn').setAttribute('aria-expanded', String(open));
+}
+
 let toastTimer = 0;
 function toast(msg) {
   const t = $('toast');
@@ -560,22 +576,27 @@ $('installBtn').addEventListener('click', async () => {
 // ---------- Wire up ----------
 buildFace();
 
-// One row on the main page, one inside the stage that shows only in a tall floating window.
-const presetButtons = [];
-for (const row of [$('presets'), $('pipPresets')]) {
-  for (const m of PRESETS) {
-    const b = document.createElement('button');
-    b.innerHTML = `${m}<span class="unit"> min</span>`;
-    b.dataset.min = m;
-    b.addEventListener('click', () => setMinutes(m));
-    row.append(b);
-    presetButtons.push(b);
-  }
-}
+const presetButtons = PRESETS.map((m) => {
+  const b = document.createElement('button');
+  b.innerHTML = `${m}<span class="unit"> min</span>`;
+  b.dataset.min = m;
+  b.addEventListener('click', () => setMinutes(m));
+  $('presets').append(b);
+  return b;
+});
 
 startBtn.addEventListener('click', toggle);
 $('resetBtn').addEventListener('click', reset);
-$('pipBtn').addEventListener('click', togglePip);
+$('pipBtn').addEventListener('click', () => { setMenu(false); togglePip(); });
+
+$('menuBtn').addEventListener('click', () => setMenu($('menu').hidden));
+// A click outside the open menu only closes it, so it can't also change the dial.
+document.addEventListener('pointerdown', (e) => {
+  if ($('menu').hidden || e.target.closest('#menu, #menuBtn')) return;
+  e.stopPropagation();
+  e.preventDefault();
+  setMenu(false);
+}, true);
 $('backBtn').addEventListener('click', () => pipWin && pipWin.close());
 
 $('chimeBox').checked = settings.chime;
